@@ -1,45 +1,30 @@
 ﻿using System;
-using System.IO;
 
 namespace Webauthntest.Models
 {
     public static class DERSignature
     {
-        public static byte[] Deserialize(byte[] s)
+        public static Span<byte> Deserialize(Span<byte> s)
         {
-            // https://crypto.stackexchange.com/questions/1795/how-can-i-convert-a-der-ecdsa-signature-to-asn-1
-            using (var ms = new MemoryStream(s))
-            {
-                var header = ms.ReadByte();
-                var b1 = ms.ReadByte();
+            // SEQ      s[0] == 0x30
+            // (length) s[1]
+            // INTEGER  s[2] == 0x02
+            byte rlen = s[3];
+            var vr = RemoveAnyNegativeFlag(s.Slice(4, rlen));
 
-                var markerR = ms.ReadByte();
-                var b2 = ms.ReadByte();
-                var vr = new byte[b2];
-                ms.Read(vr, 0, vr.Length);
-                vr = RemoveAnyNegativeFlag(vr);
+            // INTEGER  s[4 + b2] == 0x02;
+            byte slen = s[5 + rlen];
+            var vs = RemoveAnyNegativeFlag(s.Slice(6 + rlen, slen));
 
-                var markerS = ms.ReadByte();
-                var b3 = ms.ReadByte();
-                var vs = new byte[b3];
-                ms.Read(vs, 0, vs.Length);
-                vs = RemoveAnyNegativeFlag(vs);
-
-                var parsedSignature = new byte[vr.Length + vs.Length];
-                vr.CopyTo(parsedSignature, 0);
-                vs.CopyTo(parsedSignature, vr.Length);
-
-                return parsedSignature;
-            }
+            var parsedSignature = new Span<byte>(new byte[vr.Length + vs.Length]);
+            vr.CopyTo(parsedSignature);
+            vs.CopyTo(parsedSignature.Slice(vr.Length));
+            return parsedSignature;
         }
 
-        private static byte[] RemoveAnyNegativeFlag(byte[] input)
+        private static Span<byte> RemoveAnyNegativeFlag(Span<byte> input)
         {
-            if (input[0] != 0) return input;
-
-            var output = new byte[input.Length - 1];
-            Array.Copy(input, 1, output, 0, output.Length);
-            return output;
+            return input[0] == 0 ? input.Slice(1) : input;
         }
     }
 }
