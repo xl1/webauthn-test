@@ -161,19 +161,6 @@ namespace Webauthntest.Models
             if (!rpidHash.SequenceEqual(CredentialUtility.Hash(Encoding.UTF8.GetBytes(rpid))))
                 throw new Exception("RP ID Hash does not match");
 
-            /*
-key[CBORObject.FromObject(1)].ToString() // keytype
-"2"
-key[CBORObject.FromObject(3)].ToString() // algorithm
-"-7"
-key[CBORObject.FromObject(-1)].ToString() // curve
-"1"
-key[CBORObject.FromObject(-2)].ToString() // x
-"h'E2DEF510883946FBBBF7AA958B6200A9863763A2383AD92F5B84F1A5A5DDCCCF'"
-key[CBORObject.FromObject(-3)].ToString() // y
-"h'1D7FB55C68ACA6391DCAC5C895E50150719892C86D6060BCB790FFA9855B4182'"
-*/
-
             var publicKey = CBORObject.DecodeFromBytes(cred.PublicKey);
             var x = publicKey.MapGet(-2).GetByteString();
             var y = publicKey.MapGet(-3).GetByteString();
