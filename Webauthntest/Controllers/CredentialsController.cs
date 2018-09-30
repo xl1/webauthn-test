@@ -65,7 +65,7 @@ namespace Webauthntest.Controllers
             {
                 var name = Encoding.UTF8.GetString(nameBytes);
                 var clientData = CredentialRegistration.ValidateClientData(req.ClientData, origin, challenge);
-                var verifiedCredential = CredentialRegistration.ValidateAttestationData(name, req.Attestation, RelyingPartyId);
+                var verifiedCredential = CredentialRegistration.ValidateAttestationData(name, req.Attestation, req.ClientData, RelyingPartyId);
 
                 // save
                 _credentialRepository.Add(verifiedCredential);

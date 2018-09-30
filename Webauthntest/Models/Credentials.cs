@@ -42,7 +42,7 @@ namespace Webauthntest.Models
             return data;
         }
 
-        public static PublicKeyCredential ValidateAttestationData(string name, byte[] bytes, string rpid)
+        public static PublicKeyCredential ValidateAttestationData(string name, byte[] bytes, byte[] clientData, string rpid)
         {
             var cbor = CBORObject.DecodeFromBytes(bytes);
 
@@ -76,6 +76,37 @@ namespace Webauthntest.Models
             switch (format)
             {
                 case "none":
+                    break;
+                case "packed":
+                    // TODO
+                    break;
+                case "fido-u2f":
+                    var publicKey = CBORObject.DecodeFromBytes(credentialPublicKey);
+                    if (publicKey.MapGet(3).AsInt32() != -7) // ES256
+                        throw new Exception("invalid signature algorithm");
+
+                    var x = publicKey.MapGet(-2).GetByteString();
+                    var y = publicKey.MapGet(-3).GetByteString();
+                    if (x.Length != 32 || y.Length != 32)
+                        throw new Exception("invalid publickey length");
+
+                    var publicKeyU2F = new ByteArrayWriter(1 + 32 + 32)
+                        .Set(4)
+                        .CopyFrom(x)
+                        .CopyFrom(y)
+                        .ToArray();
+
+                    var verificationData = new ByteArrayWriter(1 + 32 + 32 + credentialIdLength + (1 + 32 + 32))
+                        .Set(0)
+                        .CopyFrom(rpidHash)
+                        .CopyFrom(CredentialUtility.Hash(clientData))
+                        .CopyFrom(credentialId)
+                        .CopyFrom(publicKeyU2F)
+                        .ToArray();
+
+                    var fidoU2F = FIDOU2FAttestationStatement.Decode(attestationStatement);
+                    if (!fidoU2F.VerifyData(verificationData))
+                        throw new Exception("invalid signature");
                     break;
                 default:
                     throw new Exception($"unsupported attestation format: {format}");

@@ -58,6 +58,7 @@ async function makeCredential(name) {
             alg: -7 // ES256
         }],
         timeout: 60000,
+        attestation: /**@type {AttestationConveyancePreference}*/("direct")
     };
 
     showMessage('please insert your security key');
